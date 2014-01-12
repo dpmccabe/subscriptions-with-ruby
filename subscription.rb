@@ -12,14 +12,16 @@ class Subscription
   def initialize(args)
     args.each { |k, v| instance_variable_set("@#{k}", v) unless v.nil? }
     @frequency ||= :daily
+    compute_residue
+  end
 
-    @date_move_method = case @frequency
-    when :daily
-      :days
-    when :monthly
-      :months
-    end
+  def interval=(interval)
+    @interval = interval
+    compute_residue
+  end
 
+  def start_date=(start_date)
+    @start_date = start_date
     compute_residue
   end
 
@@ -28,12 +30,12 @@ class Subscription
   end
 
   def next_processing_date(from_date)
-    from_date + ((@residue - residue_for_date(from_date)) % @interval).send(@date_move_method)
+    from_date + ((@residue - residue_for_date(from_date)) % @interval).send(date_move_method)
   end
 
   def next_n_processing_dates(n, from_date)
     first_next_processing_date = next_processing_date(from_date)
-    0.upto(n - 1).map { |i| first_next_processing_date + (@interval * i).send(@date_move_method) }
+    0.upto(n - 1).map { |i| first_next_processing_date + (@interval * i).send(date_move_method) }
   end
 
   private
@@ -49,5 +51,14 @@ class Subscription
 
   def compute_residue
     @residue = residue_for_date(@start_date)
+  end
+
+  def date_move_method
+    @date_move_method ||= case @frequency
+    when :daily
+      :days
+    when :monthly
+      :months
+    end
   end
 end
