@@ -30,7 +30,7 @@ class Subscription
   end
 
   def next_processing_date(from_date)
-    from_date + ((@residue - residue_for_date(from_date)) % @interval).send(date_move_method)
+    from_date + ((@residue - residue_for_date(from_date)).modulo(@interval)).send(date_move_method)
   end
 
   def next_n_processing_dates(n, from_date)
@@ -43,9 +43,9 @@ class Subscription
   def residue_for_date(date)
     case @frequency
     when :daily
-      (date - @@beginning).to_i % @interval
+      (date - @@beginning).to_i.modulo(@interval)
     when :monthly
-      ((date.year - @@beginning.year) * 12 + (date.month - @@beginning.month)) % @interval
+      ((date.year - @@beginning.year) * 12 + (date.month - @@beginning.month)).modulo(@interval)
     end
   end
 

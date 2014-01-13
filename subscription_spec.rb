@@ -1,5 +1,5 @@
 require 'rspec'
-require_relative ('subscription')
+require_relative 'subscription'
 
 module SubscriptionSpecHelpers
   def residues(subscriptions)
@@ -18,7 +18,7 @@ end
 describe Subscription do
   include SubscriptionSpecHelpers
 
-  describe '.initialize' do
+  describe '#initialize' do
     context 'daily frequency' do
       subject { Subscription.new(interval: 14, start_date: Date.tomorrow) }
 
@@ -59,7 +59,7 @@ describe Subscription do
           expect(unique_residues(subscriptions)).to eq([1])
         end
 
-        it 'computes members of all possible residue classes' do
+        it 'computes the complete residue system' do
           subscriptions = [
             Subscription.new(interval: 7, start_date: beginning),
             Subscription.new(interval: 7, start_date: beginning + 1.day),
@@ -86,14 +86,14 @@ describe Subscription do
           expect(unique_residues(subscriptions)).to eq([0])
         end
 
-        it 'computes members of the residue class 1' do
+        it 'computes members of the residue class 25' do
           subscriptions = [
-            Subscription.new(interval: 100, start_date: beginning + 1.day),
-            Subscription.new(interval: 100, start_date: beginning + 101.days),
-            Subscription.new(interval: 100, start_date: beginning + 501.days)
+            Subscription.new(interval: 100, start_date: beginning + 25.day),
+            Subscription.new(interval: 100, start_date: beginning + 125.days),
+            Subscription.new(interval: 100, start_date: beginning + 525.days)
           ]
 
-          expect(unique_residues(subscriptions)).to eq([1])
+          expect(unique_residues(subscriptions)).to eq([25])
         end
       end
     end
@@ -120,7 +120,7 @@ describe Subscription do
           expect(unique_residues(subscriptions)).to eq([1])
         end
 
-        it 'computes members of all possible residue classes' do
+        it 'computes the complete residue system' do
           subscriptions = [
             Subscription.new(frequency: :monthly, interval: 5, start_date: beginning),
             Subscription.new(frequency: :monthly, interval: 5, start_date: beginning + 1.month),
@@ -187,6 +187,20 @@ describe Subscription do
           expect(subscription.process_on?(beginning + 11.days + 29.days)).to be_false
         end
       end
+
+      it 'should process subscriptions of different intervals on the same day when applicable' do
+        subscription_1 = Subscription.new(interval: 10, start_date: beginning)
+        subscription_2 = Subscription.new(interval: 8, start_date: beginning + 2.days)
+        subscription_3 = Subscription.new(interval: 15, start_date: beginning + 5.days)
+        subscription_4 = Subscription.new(interval: 10, start_date: beginning + 5.days)
+
+        common_date = Date.new(2014, 2, 20)
+
+        expect(subscription_1.process_on?(common_date)).to be_true
+        expect(subscription_2.process_on?(common_date)).to be_true
+        expect(subscription_3.process_on?(common_date)).to be_true
+        expect(subscription_4.process_on?(common_date)).to be_false
+      end
     end
 
     context 'when the frequency is monthly' do
@@ -210,27 +224,27 @@ describe Subscription do
 
   describe '#next_processing_date' do
     context 'when the frequency is daily' do
-      context 'when the subscription is every 21 days and starts at the beginning' do
-        let(:subscription) { Subscription.new(interval: 21, start_date: beginning) }
+      context 'when the subscription is every 21 days and starts 2 days after the beginning' do
+        let(:subscription) { Subscription.new(interval: 21, start_date: beginning + 2.days) }
 
         it 'calculates the first processing date' do
-          expect(subscription.next_processing_date(beginning)).to eq(beginning)
+          expect(subscription.next_processing_date(beginning + 2.days)).to eq(beginning + 2.days)
         end
 
         it 'calculates the next processing date 1 day later' do
-          expect(subscription.next_processing_date(beginning + 1.day)).to eq(beginning + 21.days)
+          expect(subscription.next_processing_date(beginning + 2.days + 1.day)).to eq(beginning + 2.days + 21.days)
         end
 
         it 'calculates the next processing date 10 days later' do
-          expect(subscription.next_processing_date(beginning + 10.days)).to eq(beginning + 21.days)
+          expect(subscription.next_processing_date(beginning + 2.days + 10.days)).to eq(beginning + 2.days + 21.days)
         end
 
-        it 'calculates the next processing date 21 days later' do
-          expect(subscription.next_processing_date(beginning + 21.days)).to eq(beginning + 21.days)
+        it 'calculates the next processing date on the day of' do
+          expect(subscription.next_processing_date(beginning + 2.days + 21.days)).to eq(beginning + 2.days + 21.days)
         end
 
         it 'calculates the third processing date 25 days later' do
-          expect(subscription.next_processing_date(beginning + 25.days)).to eq(beginning + 42.days)
+          expect(subscription.next_processing_date(beginning + 2.days + 25.days)).to eq(beginning + 2.days + 42.days)
         end
       end
 
@@ -242,19 +256,19 @@ describe Subscription do
         end
 
         it 'calculates the next processing date 1 day later' do
-          expect(subscription.next_processing_date(beginning + 5.days)).to eq(beginning + 14.days)
+          expect(subscription.next_processing_date(beginning + 4.days + 1.day)).to eq(beginning + 14.days)
         end
 
         it 'calculates the next processing date 9 days later' do
-          expect(subscription.next_processing_date(beginning + 13.days)).to eq(beginning + 14.days)
+          expect(subscription.next_processing_date(beginning + 4.days + 9.days)).to eq(beginning + 14.days)
         end
 
-        it 'calculates the next processing date 10 days later' do
-          expect(subscription.next_processing_date(beginning + 14.days)).to eq(beginning + 14.days)
+        it 'calculates the next processing date on the day of' do
+          expect(subscription.next_processing_date(beginning + 4.days + 10.days)).to eq(beginning + 14.days)
         end
 
         it 'calculates the third processing date 17 days later' do
-          expect(subscription.next_processing_date(beginning + 21.days)).to eq(beginning + 24.days)
+          expect(subscription.next_processing_date(beginning + 4.days + 17.days)).to eq(beginning + 24.days)
         end
       end
     end
@@ -292,7 +306,7 @@ describe Subscription do
         let(:subscription) { Subscription.new(interval: 7, start_date: beginning + 31.days) }
 
         it 'calculates the next 5 processing dates 1 day after the first processing' do
-          expect(subscription.next_n_processing_dates(5, beginning + 32.days)).to eq([
+          expect(subscription.next_n_processing_dates(5, beginning + 31.days + 1.day)).to eq([
             beginning + 38.days,
             beginning + 45.days,
             beginning + 52.days,
@@ -306,7 +320,7 @@ describe Subscription do
         let(:subscription) { Subscription.new(interval: 40, start_date: beginning + 11.days) }
 
         it 'calculates the next 3 processing dates 100 days after the first processing' do
-          expect(subscription.next_n_processing_dates(3, beginning + 111.days)).to eq([
+          expect(subscription.next_n_processing_dates(3, beginning + 11.days + 100.days)).to eq([
             beginning + 131.days,
             beginning + 171.days,
             beginning + 211.days
@@ -320,7 +334,7 @@ describe Subscription do
         let(:subscription) { Subscription.new(frequency: :monthly, interval: 7, start_date: beginning + 3.months) }
 
         it 'calculates the next 5 processing dates 1 month after the first processing' do
-          expect(subscription.next_n_processing_dates(5, beginning + 4.months)).to eq([
+          expect(subscription.next_n_processing_dates(5, beginning + 3.months + 1.month)).to eq([
             beginning + 10.months,
             beginning + 17.months,
             beginning + 24.months,
